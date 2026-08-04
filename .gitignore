@@ -1,0 +1,29 @@
+# secrets
+.env
+.env.local
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+
+# local fixtures with real personal data
+*.pdf
+!docs/**/*.pdf
+
+# internal planning, not part of the submission
+PROJECT_PLAN.md
