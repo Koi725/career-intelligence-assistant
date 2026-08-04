@@ -1,0 +1,54 @@
+@import "../tailwind/components.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * shadcn/ui CSS variables — required for primitive component theming.
+   * Both :root and .dark are set to our dark palette since the app is
+   * always dark (html class="dark"). The .dark block wins at runtime.
+   */
+  :root {
+    --background: #0e1012;
+    --foreground: #e8eaec;
+    --card: #121518;
+    --card-foreground: #e8eaec;
+    --popover: #121518;
+    --popover-foreground: #e8eaec;
+    --primary: #5980a6;
+    --primary-foreground: #0b0e10;
+    --secondary: #181c20;
+    --secondary-foreground: #e8eaec;
+    --muted: #0f1214;
+    --muted-foreground: #9aa2a9;
+    --accent: #181c20;
+    --accent-foreground: #c3c9ce;
+    --destructive: #c98d86;
+    --border: #24282c;
+    --input: #262b30;
+    --ring: #5980a6;
+    --radius: 0rem;
+  }
+  .dark {
+    --background: #0e1012;
+    --foreground: #e8eaec;
+    --card: #121518;
+    --card-foreground: #e8eaec;
+    --popover: #121518;
+    --popover-foreground: #e8eaec;
+    --primary: #5980a6;
+    --primary-foreground: #0b0e10;
+    --secondary: #181c20;
+    --secondary-foreground: #e8eaec;
+    --muted: #0f1214;
+    --muted-foreground: #9aa2a9;
+    --accent: #181c20;
+    --accent-foreground: #c3c9ce;
+    --destructive: #c98d86;
+    --border: #24282c;
+    --input: #262b30;
+    --ring: #5980a6;
+  }
+}
