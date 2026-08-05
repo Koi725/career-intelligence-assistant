@@ -1,6 +1,7 @@
 import { AnswerBody } from "@/components/answer-body";
 import { Citations } from "@/components/citations";
 import { MetaFooter } from "@/components/meta-footer";
+import { NoResultsNote } from "@/components/no-results-note";
 
 import type { AssistantMessageProps } from "./assistant-message.types";
 
@@ -26,6 +27,7 @@ export function AssistantMessage({
           sourcesOpen={sourcesOpen}
           onSourcesToggle={onSourcesToggle}
         />
+        {exchange.note && <NoResultsNote note={exchange.note} />}
         <MetaFooter footer={exchange.footer} />
       </div>
     </div>
