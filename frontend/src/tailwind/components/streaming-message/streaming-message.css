@@ -1,0 +1,17 @@
+@keyframes streaming-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.streaming-pulse {
+  animation: streaming-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes streaming-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor {
+  animation: streaming-cursor-blink 1s step-end infinite;
+}
