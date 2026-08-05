@@ -1,0 +1,16 @@
+/* Corner marks positioned 5px outside each edge of the card border. */
+.blueprint-mark {
+  position: absolute;
+  color: #5980a6;
+  font-size: 11px;
+  line-height: 1;
+  font-style: normal;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  user-select: none;
+}
+
+.blueprint-mark-tl { top: -7px; left: -5px; }
+.blueprint-mark-tr { top: -7px; right: -5px; }
+.blueprint-mark-bl { bottom: -7px; left: -5px; }
+.blueprint-mark-br { bottom: -7px; right: -5px; }

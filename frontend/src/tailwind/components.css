@@ -11,6 +11,6 @@
  *   - No @apply anywhere in this tree.
  *   - A component with nothing to put in a css file does not get one.
  *     Empty files are dead code.
- *
- * Component imports are added here as components are built in later phases.
  */
+
+@import "./components/blueprint-card/blueprint-card.css";
