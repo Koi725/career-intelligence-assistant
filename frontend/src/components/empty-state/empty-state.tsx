@@ -19,7 +19,7 @@ export function EmptyState({ onStartStreaming }: EmptyStateProps) {
           <h2 className="font-heading text-xl font-semibold uppercase tracking-wide text-fg">
             Ask anything about your fit
           </h2>
-          <p className="text-sm text-muted leading-6">
+          <p className="text-sm text-muted leading-6 text-pretty">
             The assistant searches your resume and job descriptions to give sourced, specific answers.
           </p>
         </div>

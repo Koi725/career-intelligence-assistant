@@ -35,7 +35,7 @@ export function GateBar({ onContinue }: GateBarProps) {
           className={cn(
             "flex h-cta flex-none items-center gap-2 border px-4",
             canContinue
-              ? "border-accent bg-accent text-accent-fg focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              ? "border-accent bg-accent text-accent-fg hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
               : "cursor-not-allowed border-hairline text-faint-2"
           )}
         >

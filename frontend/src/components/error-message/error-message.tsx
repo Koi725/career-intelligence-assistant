@@ -22,7 +22,7 @@ export function ErrorMessage({ userMessage, onRetry }: ErrorMessageProps) {
 
           <div className="flex flex-1 min-w-0 flex-col gap-3">
             <div className="border border-error-border bg-error-bg px-4 py-3">
-              <p className="text-sm leading-6 text-error-body">{ERROR_DETAIL}</p>
+              <p className="text-sm leading-6 text-error-body text-pretty">{ERROR_DETAIL}</p>
             </div>
 
             <div className="flex items-center gap-2">

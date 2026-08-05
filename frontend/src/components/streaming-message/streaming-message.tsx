@@ -30,7 +30,7 @@ export function StreamingMessage({ onStop }: StreamingMessageProps) {
             )}
 
             {streamPhase >= 2 && visibleWords.length > 0 && (
-              <p className="text-sm leading-7 text-fg-body">
+              <p className="text-sm leading-7 text-fg-body text-pretty">
                 {visibleWords.join(" ")}
                 {streamPhase === 3 && (
                   <span

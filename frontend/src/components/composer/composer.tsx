@@ -32,7 +32,7 @@ export function Composer({ scopeLabel }: ComposerProps) {
             aria-label="Send message"
             disabled={value.trim().length === 0}
             className={cn(
-              "flex h-send-button w-send-button flex-none items-center justify-center bg-accent text-accent-fg",
+              "flex h-send-button w-send-button flex-none items-center justify-center bg-accent text-accent-fg hover:bg-accent-hover",
               "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
               value.trim().length === 0 && "cursor-not-allowed opacity-40"
             )}

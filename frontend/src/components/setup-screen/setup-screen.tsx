@@ -12,7 +12,7 @@ export function SetupScreen() {
           <h1 className="font-heading text-4xl font-semibold leading-tight text-fg-bright">
             Add your resume and the jobs you&apos;re considering
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted text-pretty">
             Everything the assistant says is grounded in these documents and cites the passage it came
             from. Nothing leaves this session.
           </p>
