@@ -10,7 +10,6 @@ const PHASE_LABELS = ["Retrieving…", "Reading 12 sources…", "Generating answ
 
 export function StreamingMessage({ onStop }: StreamingMessageProps) {
   const { streamPhase, visibleWords, stopStreaming } = useStreaming(onStop);
-  const phaseLabel = PHASE_LABELS[Math.min(streamPhase, 2) as 0 | 1 | 2];
 
   return (
     <div className="flex-1 min-h-0 overflow-auto">
@@ -26,7 +25,7 @@ export function StreamingMessage({ onStop }: StreamingMessageProps) {
             {streamPhase < 3 && (
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 flex-none bg-accent streaming-pulse" aria-hidden="true" />
-                <span className="font-mono text-xs text-muted">{phaseLabel}</span>
+                <span className="font-mono text-xs text-muted">{PHASE_LABELS[streamPhase as 0 | 1 | 2]}</span>
               </div>
             )}
 
