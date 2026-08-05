@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { SHOW_STATE_SWITCHER } from "@/lib/config";
-import type { Screen } from "@/lib/types";
+import type { ChatState, Screen } from "@/lib/types";
 
 import type { TopBarProps } from "./top-bar.types";
 
@@ -12,9 +12,15 @@ const STEPS: { id: Screen; index: string; label: string }[] = [
   { id: "fit", index: "03", label: "FIT" },
 ];
 
-const CHAT_STATES = ["Empty", "Thread", "Streaming", "Error", "No match"] as const;
+const STATE_MAP: { label: string; state: ChatState }[] = [
+  { label: "Empty", state: "empty" },
+  { label: "Thread", state: "thread" },
+  { label: "Streaming", state: "streaming" },
+  { label: "Error", state: "error" },
+  { label: "No match", state: "noresults" },
+];
 
-export function TopBar({ screen, onScreenChange }: TopBarProps) {
+export function TopBar({ screen, onScreenChange, chatState, onChatStateChange }: TopBarProps) {
   return (
     <header className="flex h-topbar flex-none items-center border-b border-hairline bg-header px-4 gap-4">
       <div className="flex items-center gap-3 flex-1">
@@ -48,18 +54,28 @@ export function TopBar({ screen, onScreenChange }: TopBarProps) {
         })}
       </nav>
 
-      {SHOW_STATE_SWITCHER && screen === "chat" && (
+      {SHOW_STATE_SWITCHER && screen === "chat" && onChatStateChange && (
         <div className="flex flex-none items-center gap-2">
           <span className="font-mono text-xs tracking-widest uppercase text-faint">STATE</span>
           <div className="flex border border-hairline h-6">
-            {CHAT_STATES.map((state) => (
-              <button
-                key={state}
-                className="px-2 text-xs font-mono text-muted border-l border-hairline first:border-l-0 whitespace-nowrap hover:bg-control focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-              >
-                {state}
-              </button>
-            ))}
+            {STATE_MAP.map(({ label, state }) => {
+              const isActive = chatState === state;
+              return (
+                <button
+                  key={state}
+                  onClick={() => onChatStateChange(state)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    "border-l border-hairline px-2 font-mono text-xs whitespace-nowrap first:border-l-0 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+                    isActive
+                      ? "bg-control-active text-fg"
+                      : "text-muted hover:bg-control"
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

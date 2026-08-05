@@ -6,10 +6,14 @@ import { DocumentsProvider } from "@/hooks/use-documents";
 import { ChatScreen } from "./chat-screen";
 
 describe("ChatScreen", () => {
-  it("renders the scope bar and message thread", () => {
+  it("renders the scope bar and message thread in thread state", () => {
     render(
       <DocumentsProvider>
-        <ChatScreen onNavigate={vi.fn()} />
+        <ChatScreen
+          onNavigate={vi.fn()}
+          chatState="thread"
+          onChatStateChange={vi.fn()}
+        />
       </DocumentsProvider>
     );
     expect(screen.getByText("RETRIEVAL SCOPE")).toBeInTheDocument();

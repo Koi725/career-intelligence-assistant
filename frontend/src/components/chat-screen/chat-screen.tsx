@@ -4,9 +4,13 @@ import { useState } from "react";
 
 import { Composer } from "@/components/composer";
 import { DocumentRail } from "@/components/document-rail";
+import { EmptyState } from "@/components/empty-state";
+import { ErrorMessage } from "@/components/error-message";
 import { MessageThread } from "@/components/message-thread";
 import { ScopeBar } from "@/components/scope-bar";
+import { StreamingMessage } from "@/components/streaming-message";
 import { useDocuments } from "@/hooks/use-documents";
+import { ERROR_USER_MESSAGE, NO_RESULTS_EXCHANGE } from "@/data/chat/chat-data";
 import { JOBS } from "@/data/jobs/jobs-data";
 import { RESUME } from "@/data/resume/resume-data";
 import type { Scope } from "@/lib/types";
@@ -19,7 +23,7 @@ function getScopeLabel(scope: Scope, jobs: typeof JOBS): string {
   return job ? job.title.toLowerCase() : "unknown";
 }
 
-export function ChatScreen({ onNavigate }: ChatScreenProps) {
+export function ChatScreen({ onNavigate, chatState, onChatStateChange }: ChatScreenProps) {
   const { resume, jobs } = useDocuments();
   const [scope, setScope] = useState<Scope>("all");
   const [expandedChips, setExpandedChips] = useState<Record<string, boolean>>({});
@@ -51,19 +55,46 @@ export function ChatScreen({ onNavigate }: ChatScreenProps) {
         onManageDocuments={() => onNavigate("setup")}
       />
 
-      <div className="flex flex-1 min-w-0 flex-col min-h-0">
-        <ScopeBar
-          scope={scope}
-          onScopeChange={setScope}
-          jobs={activeJobs}
-          resumeChunks={activeResume.chunks}
-        />
-        <MessageThread
-          expandedChips={expandedChips}
-          onChipToggle={handleChipToggle}
-          sourcesOpen={sourcesOpen}
-          onSourcesToggle={handleSourcesToggle}
-        />
+      <div className="flex flex-1 min-h-0 min-w-0 flex-col">
+        {chatState !== "empty" && (
+          <ScopeBar
+            scope={scope}
+            onScopeChange={setScope}
+            jobs={activeJobs}
+            resumeChunks={activeResume.chunks}
+          />
+        )}
+
+        {chatState === "empty" && (
+          <EmptyState onStartStreaming={() => onChatStateChange("streaming")} />
+        )}
+        {chatState === "thread" && (
+          <MessageThread
+            expandedChips={expandedChips}
+            onChipToggle={handleChipToggle}
+            sourcesOpen={sourcesOpen}
+            onSourcesToggle={handleSourcesToggle}
+          />
+        )}
+        {chatState === "streaming" && (
+          <StreamingMessage onStop={() => onChatStateChange("thread")} />
+        )}
+        {chatState === "error" && (
+          <ErrorMessage
+            userMessage={ERROR_USER_MESSAGE}
+            onRetry={() => onChatStateChange("streaming")}
+          />
+        )}
+        {chatState === "noresults" && (
+          <MessageThread
+            exchanges={[NO_RESULTS_EXCHANGE]}
+            expandedChips={expandedChips}
+            onChipToggle={handleChipToggle}
+            sourcesOpen={sourcesOpen}
+            onSourcesToggle={handleSourcesToggle}
+          />
+        )}
+
         <Composer scopeLabel={scopeLabel} />
       </div>
     </div>
