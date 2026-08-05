@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
@@ -94,6 +95,7 @@ const config: Config = {
         "scope-marker": "6px",
         logo: "22px",
         avatar: "24px",
+        "remove-btn": "26px",
         "send-button": "34px",
         "citation-kind": "52px",
         cursor: "7px",
@@ -103,7 +105,10 @@ const config: Config = {
         "scope-marker": "6px",
         logo: "22px",
         avatar: "24px",
+        "remove-btn": "26px",
         "send-button": "34px",
+        topbar: "52px",
+        cta: "38px",
         "score-track": "4px",
         cursor: "15px",
       },
@@ -122,7 +127,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindAnimate],
 };
 
 export default config;
