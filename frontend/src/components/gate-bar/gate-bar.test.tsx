@@ -1,9 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
 
+import { GateBar } from "./gate-bar";
 import { DocumentsProvider } from "@/hooks/use-documents";
 import { RESUME } from "@/data/resume/resume-data";
 import { JOBS } from "@/data/jobs/jobs-data";
+
 import type { JobDoc, ResumeDoc } from "@/lib/types";
 
 function renderGateBar(initialResume: ResumeDoc | null = null, initialJobs: JobDoc[] = []) {
@@ -13,8 +15,6 @@ function renderGateBar(initialResume: ResumeDoc | null = null, initialJobs: JobD
     </DocumentsProvider>
   );
 }
-
-import { GateBar } from "./gate-bar";
 
 describe("GateBar", () => {
   it("shows the combined reason when neither resume nor jobs are present", () => {
