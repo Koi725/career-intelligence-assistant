@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ChatScreen } from "@/components/chat-screen";
+import { FitScreen } from "@/components/fit-screen";
 import { GateBar } from "@/components/gate-bar";
 import { SetupScreen } from "@/components/setup-screen";
 import { TopBar } from "@/components/top-bar";
@@ -38,11 +39,7 @@ export function AppShell() {
           />
         )}
 
-        {screen === "fit" && (
-          <div className="flex-1 min-h-0 flex items-center justify-center">
-            <span className="font-mono text-sm text-muted">Phase 5</span>
-          </div>
-        )}
+        {screen === "fit" && <FitScreen />}
       </div>
     </DocumentsProvider>
   );
