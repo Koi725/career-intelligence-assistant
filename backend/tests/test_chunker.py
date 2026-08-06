@@ -61,8 +61,10 @@ def test_heading_label_propagates_to_following_chunks():
     """The nearest preceding heading becomes every subsequent chunk's label."""
     chunker = Chunker()
     # All-caps heading followed by body text long enough to produce multiple chunks.
-    body = "detailed content here " * 60  # ~300 tokens
-    pages = [f"EXPERIENCE\n\n{body}\n\n{body}"]
+    # "detailed content here " is ~3 cl100k tokens per repeat; 200 reps = ~600 tokens,
+    # which exceeds CHUNK_SIZE (500) and forces a hard split on the single paragraph.
+    body = "detailed content here " * 200
+    pages = [f"EXPERIENCE\n\n{body}"]
     chunks = chunker.chunk_resume(pages)
     assert len(chunks) >= 2
     for chunk in chunks:
