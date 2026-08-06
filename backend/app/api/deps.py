@@ -37,4 +37,8 @@ def get_chat_service(db: Session = Depends(get_db)) -> ChatService:
         embedder=_embedder,
         floor=settings.SIMILARITY_THRESHOLD,
     )
-    return ChatService(retrieval=retrieval, claude=ClaudeClient())
+    return ChatService(
+        retrieval=retrieval,
+        claude=ClaudeClient(),
+        resume_repo=ResumeRepository(db),
+    )
