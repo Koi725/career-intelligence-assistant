@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import chat as chat_api
 from app.api import jobs as jobs_api
 from app.api import resume as resume_api
 from app.db.session import Base, engine
@@ -15,8 +17,16 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(resume_api.router)
 app.include_router(jobs_api.router)
+app.include_router(chat_api.router)
 
 
 @app.get("/health")
