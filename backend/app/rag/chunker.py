@@ -34,18 +34,29 @@ class Chunker:
         if not tagged:
             return []
 
+        # Track the nearest preceding heading for each paragraph.
+        current_heading: str | None = None
+        para_headings: list[str | None] = []
+        for _, para in tagged:
+            detected = self._detect_heading(para)
+            if detected:
+                current_heading = detected
+            para_headings.append(current_heading)
+
         all_tokens: list[int] = []
         para_ends: set[int] = set()
         meta_starts: list[int] = []
         meta_values: list[int] = []
+        heading_values: list[str | None] = []
 
-        for meta_val, para in tagged:
+        for i, (meta_val, para) in enumerate(tagged):
             start = len(all_tokens)
             tokens = self._enc.encode(para)
             if not tokens:
                 continue
             meta_starts.append(start)
             meta_values.append(meta_val)
+            heading_values.append(para_headings[i])
             all_tokens.extend(tokens)
             para_ends.add(len(all_tokens))
 
@@ -55,6 +66,10 @@ class Chunker:
         def meta_at(pos: int) -> int:
             idx = bisect.bisect_right(meta_starts, pos) - 1
             return meta_values[max(0, idx)]
+
+        def heading_at(pos: int) -> str | None:
+            idx = bisect.bisect_right(meta_starts, pos) - 1
+            return heading_values[max(0, idx)]
 
         chunks: list[dict] = []
         pos = 0
@@ -70,8 +85,14 @@ class Chunker:
                 if candidates:
                     chunk_end = max(candidates)
 
-            content = self._enc.decode(all_tokens[pos:chunk_end])
-            chunks.append({"content": content.strip(), "meta": {meta_key: meta_at(pos)}})
+            content = self._enc.decode(all_tokens[pos:chunk_end]).strip()
+            heading = heading_at(pos)
+            label = heading if heading else " ".join(content.split()[:6])
+
+            chunks.append({
+                "content": content,
+                "meta": {meta_key: meta_at(pos), "label": label},
+            })
 
             if chunk_end >= len(all_tokens):
                 break
@@ -85,3 +106,15 @@ class Chunker:
             chunk["meta"]["total"] = total
 
         return chunks
+
+    @staticmethod
+    def _detect_heading(para: str) -> str | None:
+        first_line = para.split("\n")[0].strip()
+        if not first_line:
+            return None
+        words = first_line.split()
+        if first_line == first_line.upper() and any(c.isalpha() for c in first_line):
+            return first_line
+        if len(words) <= 8 and not first_line.endswith("."):
+            return first_line
+        return None
