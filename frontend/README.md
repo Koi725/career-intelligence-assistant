@@ -18,13 +18,7 @@ Components are server-safe by default. Add `"use client"` only when the componen
 
 ## Screens
 
-| Screen | Component | Route |
-|--------|-----------|-------|
-| Setup | `SetupScreen` | initial view |
-| Chat | `ChatScreen` | after setup |
-| Fit | `FitScreen` | placeholder — not implemented |
-
-`AppShell` owns the `screen` state and renders the active screen. `TopBar` triggers navigation.
+`AppShell` owns the active screen state and renders one of three screens: `SetupScreen` (initial view), `ChatScreen` (after documents are indexed), or `FitScreen` (placeholder — not implemented). `TopBar` renders the navigation tabs and calls back to `AppShell` on change.
 
 ## State
 
