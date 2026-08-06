@@ -55,3 +55,27 @@ def test_empty_and_single_short_paragraph():
     job_chunks = chunker.chunk_job("A short job description.")
     assert len(job_chunks) == 1
     assert job_chunks[0]["meta"]["chunk_index"] == 1
+
+
+def test_heading_label_propagates_to_following_chunks():
+    """The nearest preceding heading becomes every subsequent chunk's label."""
+    chunker = Chunker()
+    # All-caps heading followed by body text long enough to produce multiple chunks.
+    body = "detailed content here " * 60  # ~300 tokens
+    pages = [f"EXPERIENCE\n\n{body}\n\n{body}"]
+    chunks = chunker.chunk_resume(pages)
+    assert len(chunks) >= 2
+    for chunk in chunks:
+        assert chunk["meta"]["label"] == "EXPERIENCE", (
+            f"Expected 'EXPERIENCE' label, got {chunk['meta']['label']!r}"
+        )
+
+
+def test_label_falls_back_to_first_six_words_when_no_heading():
+    """Without a preceding heading, label is the first six words of the chunk."""
+    chunker = Chunker()
+    text = "TypeScript six years React six years Node GraphQL Playwright"
+    chunks = chunker.chunk_job(text)
+    assert len(chunks) == 1
+    expected = " ".join(text.split()[:6])
+    assert chunks[0]["meta"]["label"] == expected
