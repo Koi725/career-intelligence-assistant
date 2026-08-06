@@ -15,6 +15,7 @@ async def create_job(
     text: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
 ) -> JobDoc:
+    # Request-shape validation: not a domain condition, belongs here.
     if text and file:
         raise HTTPException(status_code=422, detail="Provide either text or a file, not both.")
     if text:
