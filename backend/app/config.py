@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     SIMILARITY_THRESHOLD: float = 0.3
     CHUNK_SIZE: int = 512
     CHUNK_OVERLAP: int = 64
+    MAX_TOKENS_PER_REQUEST: int = 4096
+    DAILY_TOKEN_BUDGET: int = 200_000
 
 
 settings = Settings()
