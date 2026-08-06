@@ -7,6 +7,60 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_ANALYZE_TOOL = {
+    "name": "record_fit_analysis",
+    "description": "Record four-axis fit scores for a candidate against a job description.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "technical": {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "number", "description": "0.0–1.0"},
+                    "justification": {"type": "string"},
+                },
+                "required": ["score", "justification"],
+            },
+            "experience": {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "number", "description": "0.0–1.0"},
+                    "justification": {"type": "string"},
+                },
+                "required": ["score", "justification"],
+            },
+            "seniority": {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "number", "description": "0.0–1.0"},
+                    "justification": {"type": "string"},
+                },
+                "required": ["score", "justification"],
+            },
+            "domain": {
+                "type": "object",
+                "properties": {
+                    "score": {"type": "number", "description": "0.0–1.0"},
+                    "justification": {"type": "string"},
+                },
+                "required": ["score", "justification"],
+            },
+        },
+        "required": ["technical", "experience", "seniority", "domain"],
+    },
+}
+
+_ANALYZE_PROMPT = (
+    "You are scoring a candidate's fit for a specific job. "
+    "Base every score and justification strictly on the passages in <context>. "
+    "Do not invent evidence that is not present.\n\n"
+    "Score each axis 0.0–1.0. Write one sentence of justification citing a specific passage:\n"
+    "- technical: stack alignment — languages, frameworks, tools\n"
+    "- experience: scope and depth of relevant prior work\n"
+    "- seniority: autonomy, leadership, and level of demonstrated impact\n"
+    "- domain: industry or product-area relevance to this role\n\n"
+)
+
 _EXTRACT_TOOL = {
     "name": "record_job_fields",
     "description": "Record the title, company, and location extracted from a job description.",
@@ -77,6 +131,24 @@ class ClaudeClient:
 
         first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
         return {"title": first_line, "company": "", "location": ""}
+
+    def analyze_fit(self, context: str) -> tuple[dict, anthropic.types.Usage, str]:
+        response = self._client.messages.create(
+            model=self._model,
+            max_tokens=1024,
+            tools=[_ANALYZE_TOOL],
+            tool_choice={"type": "tool", "name": "record_fit_analysis"},
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"{_ANALYZE_PROMPT}<context>\n{context}\n</context>",
+                }
+            ],
+        )
+        for block in response.content:
+            if block.type == "tool_use" and block.name == "record_fit_analysis":
+                return block.input, response.usage, response.model
+        raise ValueError("No fit analysis result from model")
 
     async def stream_answer(
         self, system: str, messages: list[dict]
