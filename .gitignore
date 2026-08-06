@@ -27,3 +27,5 @@ npm-debug.log*
 
 # internal planning, not part of the submission
 PROJECT_PLAN.md*.egg-info/
+CLAUDE.md
+design/
