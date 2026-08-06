@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.api.deps import get_ingestion_service
@@ -35,3 +37,11 @@ def list_jobs(
     service: IngestionService = Depends(get_ingestion_service),
 ) -> list[JobDoc]:
     return service.list_jobs()
+
+
+@router.delete("/api/jobs/{job_id}", status_code=204)
+def delete_job(
+    job_id: uuid.UUID,
+    service: IngestionService = Depends(get_ingestion_service),
+) -> None:
+    service.delete_job(job_id)
