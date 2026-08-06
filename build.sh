@@ -31,10 +31,10 @@ docker compose build
 # --- Tests ---
 if [[ "$SKIP_TESTS" == false ]]; then
   header "Running backend tests"
-  docker compose run --rm --no-deps backend sh -c "PYTHONPATH=/app pytest tests/ -q"
+  docker compose run --rm backend sh -c "PYTHONPATH=/app pytest tests/ -q"
 
   header "Running frontend tests"
-  (cd frontend && npm test)
+  docker compose run --rm frontend sh -c "npm install && npm run test -- --run"
 fi
 
 # --- Start ---
