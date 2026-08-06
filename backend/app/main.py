@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import analyze as analyze_api
 from app.api import chat as chat_api
 from app.api import jobs as jobs_api
 from app.api import resume as resume_api
@@ -36,6 +37,7 @@ register_error_handlers(app)
 app.include_router(resume_api.router)
 app.include_router(jobs_api.router)
 app.include_router(chat_api.router)
+app.include_router(analyze_api.router)
 
 
 @app.get("/health")
