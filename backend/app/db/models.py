@@ -39,7 +39,7 @@ class Chunk(Base):
     source_type: Mapped[str] = mapped_column(String, nullable=False)
     source_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list[float]] = mapped_column(Vector(1536), nullable=True)
+    embedding: Mapped[list[float]] = mapped_column(Vector(384), nullable=True)
     meta: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
