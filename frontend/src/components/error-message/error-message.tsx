@@ -6,10 +6,12 @@ import { UserMessage } from "@/components/user-message";
 
 import type { ErrorMessageProps } from "./error-message.types";
 
-const ERROR_DETAIL =
+const DEFAULT_DETAIL =
   "The assistant encountered an error retrieving context from the vector store. Check the logs for a timeout or malformed embedding response.";
 
-export function ErrorMessage({ userMessage, onRetry }: ErrorMessageProps) {
+export function ErrorMessage({ userMessage, onRetry, detail }: ErrorMessageProps) {
+  const displayDetail = detail ?? DEFAULT_DETAIL;
+
   return (
     <div className="flex-1 min-h-0 overflow-auto">
       <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 pt-6 pb-6">
@@ -22,7 +24,7 @@ export function ErrorMessage({ userMessage, onRetry }: ErrorMessageProps) {
 
           <div className="flex flex-1 min-w-0 flex-col gap-3">
             <div className="border border-error-border bg-error-bg px-4 py-3">
-              <p className="text-sm leading-6 text-error-body text-pretty">{ERROR_DETAIL}</p>
+              <p className="text-sm leading-6 text-error-body text-pretty">{displayDetail}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -34,7 +36,7 @@ export function ErrorMessage({ userMessage, onRetry }: ErrorMessageProps) {
                 Retry
               </button>
               <button
-                onClick={() => navigator.clipboard.writeText(ERROR_DETAIL)}
+                onClick={() => navigator.clipboard.writeText(displayDetail)}
                 aria-label="Copy error message"
                 className="flex items-center gap-1.5 border border-hairline px-3 py-1.5 text-xs text-muted hover:border-accent hover:text-fg focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
               >

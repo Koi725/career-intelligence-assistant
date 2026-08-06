@@ -5,18 +5,22 @@ import { DocumentsProvider } from "@/hooks/use-documents";
 
 import { ChatScreen } from "./chat-screen";
 
+vi.mock("@/lib/api", () => ({
+  listJobs: vi.fn().mockResolvedValue([]),
+  uploadResume: vi.fn(),
+  createJobFromText: vi.fn(),
+  createJobFromFile: vi.fn(),
+  deleteJob: vi.fn(),
+  streamChat: vi.fn(),
+}));
+
 describe("ChatScreen", () => {
-  it("renders the scope bar and message thread in thread state", () => {
+  it("shows the empty state when no messages exist", () => {
     render(
-      <DocumentsProvider>
-        <ChatScreen
-          onNavigate={vi.fn()}
-          chatState="thread"
-          onChatStateChange={vi.fn()}
-        />
+      <DocumentsProvider initialJobs={[]}>
+        <ChatScreen onNavigate={vi.fn()} />
       </DocumentsProvider>
     );
-    expect(screen.getByText("RETRIEVAL SCOPE")).toBeInTheDocument();
-    expect(screen.getByText("How does my experience align with Job 2?")).toBeInTheDocument();
+    expect(screen.getByText("Ask anything about your fit")).toBeInTheDocument();
   });
 });

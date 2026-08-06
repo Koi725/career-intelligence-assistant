@@ -1,7 +1,7 @@
 import type { Exchange } from "@/lib/types";
 
 export interface MessageThreadProps {
-  exchanges?: Exchange[];
+  exchanges: Exchange[];
   expandedChips: Record<string, boolean>;
   onChipToggle: (chipId: string) => void;
   sourcesOpen: Record<string, boolean>;

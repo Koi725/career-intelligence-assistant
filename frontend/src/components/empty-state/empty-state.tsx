@@ -11,7 +11,7 @@ const PROMPTS = [
   "Prepare me for an interview based on Job 1.",
 ] as const;
 
-export function EmptyState({ onStartStreaming }: EmptyStateProps) {
+export function EmptyState({ onSubmit }: EmptyStateProps) {
   return (
     <div className="flex flex-1 min-h-0 items-center justify-center overflow-auto">
       <div className="flex w-full max-w-xl flex-col items-center gap-6 px-6 py-10">
@@ -28,7 +28,7 @@ export function EmptyState({ onStartStreaming }: EmptyStateProps) {
           {PROMPTS.map((prompt) => (
             <button
               key={prompt}
-              onClick={onStartStreaming}
+              onClick={() => onSubmit(prompt)}
               className="border border-hairline bg-panel px-4 py-3 text-left text-sm text-fg-body hover:border-accent hover:bg-control focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             >
               <span className="flex items-start gap-2">

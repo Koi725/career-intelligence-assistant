@@ -1,3 +1,3 @@
 export interface EmptyStateProps {
-  onStartStreaming: () => void;
+  onSubmit: (message: string) => void;
 }

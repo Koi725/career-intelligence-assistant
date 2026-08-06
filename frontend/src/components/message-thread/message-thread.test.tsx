@@ -1,12 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, vi } from "vitest";
 
+import { EXCHANGES } from "@/data/chat/chat-data";
+
 import { MessageThread } from "./message-thread";
 
 describe("MessageThread", () => {
   it("renders both exchange user messages", () => {
     render(
       <MessageThread
+        exchanges={EXCHANGES}
         expandedChips={{}}
         onChipToggle={vi.fn()}
         sourcesOpen={{}}

@@ -7,12 +7,21 @@ import { cn } from "@/lib/utils";
 
 import type { ComposerProps } from "./composer.types";
 
-export function Composer({ scopeLabel }: ComposerProps) {
+export function Composer({ scopeLabel, onSubmit, disabled = false }: ComposerProps) {
   const [value, setValue] = useState("");
+
+  const canSend = value.trim().length > 0 && !disabled;
+
+  const handleSend = () => {
+    if (!canSend) return;
+    onSubmit(value.trim());
+    setValue("");
+  };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
+      handleSend();
     }
   };
 
@@ -29,12 +38,13 @@ export function Composer({ scopeLabel }: ComposerProps) {
             className="flex-1 resize-none bg-transparent text-sm text-fg placeholder:text-faint focus:outline-none max-h-28"
           />
           <button
+            onClick={handleSend}
             aria-label="Send message"
-            disabled={value.trim().length === 0}
+            disabled={!canSend}
             className={cn(
               "flex h-send-button w-send-button flex-none items-center justify-center bg-accent text-accent-fg hover:bg-accent-hover",
               "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
-              value.trim().length === 0 && "cursor-not-allowed opacity-40"
+              !canSend && "cursor-not-allowed opacity-40"
             )}
           >
             <Send size={14} strokeWidth={1.5} />

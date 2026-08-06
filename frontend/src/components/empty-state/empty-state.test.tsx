@@ -4,10 +4,10 @@ import { describe, it, expect, vi } from "vitest";
 import { EmptyState } from "./empty-state";
 
 describe("EmptyState", () => {
-  it("clicking a prompt card calls onStartStreaming", () => {
+  it("clicking a prompt card calls onSubmit with the prompt text", () => {
     const handler = vi.fn();
-    render(<EmptyState onStartStreaming={handler} />);
+    render(<EmptyState onSubmit={handler} />);
     fireEvent.click(screen.getByText("Which job am I the strongest fit for?"));
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith("Which job am I the strongest fit for?");
   });
 });

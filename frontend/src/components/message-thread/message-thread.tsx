@@ -1,11 +1,10 @@
 import { AssistantMessage } from "@/components/assistant-message";
 import { UserMessage } from "@/components/user-message";
-import { EXCHANGES } from "@/data/chat/chat-data";
 
 import type { MessageThreadProps } from "./message-thread.types";
 
 export function MessageThread({
-  exchanges = EXCHANGES,
+  exchanges,
   expandedChips,
   onChipToggle,
   sourcesOpen,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Composer } from "@/components/composer";
 import { DocumentRail } from "@/components/document-rail";
@@ -10,46 +10,115 @@ import { MessageThread } from "@/components/message-thread";
 import { ScopeBar } from "@/components/scope-bar";
 import { StreamingMessage } from "@/components/streaming-message";
 import { useDocuments } from "@/hooks/use-documents";
-import { ERROR_USER_MESSAGE, NO_RESULTS_EXCHANGE } from "@/data/chat/chat-data";
-import { JOBS } from "@/data/jobs/jobs-data";
-import { RESUME } from "@/data/resume/resume-data";
-import type { Scope } from "@/lib/types";
+import { streamChat } from "@/lib/api";
+import type { ChatState, Citation, Exchange, ExchangeFooter, Scope } from "@/lib/types";
 
 import type { ChatScreenProps } from "./chat-screen.types";
 
-function getScopeLabel(scope: Scope, jobs: typeof JOBS): string {
-  if (scope === "all") return "all jobs";
-  const job = jobs.find((j) => j.id === scope);
-  return job ? job.title.toLowerCase() : "unknown";
+interface StreamingState {
+  userMessage: string;
+  citations: Citation[];
+  partialText: string;
 }
 
-export function ChatScreen({ onNavigate, chatState, onChatStateChange }: ChatScreenProps) {
+interface ErrorInfo {
+  userMessage: string;
+  code: string;
+  requestId: string;
+}
+
+export function ChatScreen({ onNavigate }: ChatScreenProps) {
   const { resume, jobs } = useDocuments();
   const [scope, setScope] = useState<Scope>("all");
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
+  const [streaming, setStreaming] = useState<StreamingState | null>(null);
+  const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
   const [expandedChips, setExpandedChips] = useState<Record<string, boolean>>({});
-  const [sourcesOpen, setSourcesOpen] = useState<Record<string, boolean>>({
-    "exchange-1": true,
-    "exchange-2": true,
-  });
+  const [sourcesOpen, setSourcesOpen] = useState<Record<string, boolean>>({});
 
-  const activeJobs = jobs.length > 0 ? jobs : JOBS;
-  const activeResume = resume ?? RESUME;
+  const abortRef = useRef<AbortController | null>(null);
+  // Ref mirrors streaming state so the stop handler reads a fresh value synchronously.
+  const streamingRef = useRef<StreamingState | null>(null);
 
-  const handleChipToggle = (chipId: string) => {
-    setExpandedChips((prev) => ({ ...prev, [chipId]: !prev[chipId] }));
+  const chatState: ChatState =
+    streaming !== null ? "streaming" :
+    errorInfo !== null ? "error" :
+    exchanges.length === 0 ? "empty" :
+    exchanges[exchanges.length - 1].citations.length === 0 ? "noresults" :
+    "thread";
+
+  const handleSubmit = async (message: string) => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const initial: StreamingState = { userMessage: message, citations: [], partialText: "" };
+    streamingRef.current = initial;
+    setStreaming(initial);
+    setErrorInfo(null);
+
+    await streamChat(message, scope, {
+      onSources: (citations) => {
+        const next = { ...(streamingRef.current ?? initial), citations };
+        streamingRef.current = next;
+        setStreaming(next);
+      },
+      onDelta: (text) => {
+        const prev = streamingRef.current ?? initial;
+        const next = { ...prev, partialText: prev.partialText + text };
+        streamingRef.current = next;
+        setStreaming(next);
+      },
+      onDone: (sections, footer) => {
+        const current = streamingRef.current;
+        streamingRef.current = null;
+        setStreaming(null);
+        if (current) {
+          const exchange: Exchange = {
+            id: crypto.randomUUID(),
+            userMessage: current.userMessage,
+            sections,
+            citations: current.citations,
+            footer: footer as ExchangeFooter,
+          };
+          setExchanges((prev) => [...prev, exchange]);
+        }
+      },
+      onError: (code, requestId) => {
+        streamingRef.current = null;
+        setStreaming(null);
+        setErrorInfo({ userMessage: message, code, requestId });
+      },
+    }, controller.signal);
   };
 
-  const handleSourcesToggle = (exchangeId: string) => {
-    setSourcesOpen((prev) => ({ ...prev, [exchangeId]: !(prev[exchangeId] ?? true) }));
+  const handleStop = () => {
+    abortRef.current?.abort();
+    const current = streamingRef.current;
+    streamingRef.current = null;
+    setStreaming(null);
+    // Keep partial answer if any text arrived.
+    if (current?.partialText) {
+      setExchanges((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          userMessage: current.userMessage,
+          sections: [{ heading: null, paragraph: current.partialText, bullets: [] }],
+          citations: current.citations,
+          footer: { latencySeconds: 0, tokens: 0, costDollars: 0, model: "stopped", chunks: current.citations.length },
+          note: "Generation stopped.",
+        },
+      ]);
+    }
   };
 
-  const scopeLabel = getScopeLabel(scope, activeJobs);
+  const scopeLabel = scope === "all" ? "all jobs" : (jobs.find((j) => j.id === scope)?.title.toLowerCase() ?? "unknown");
 
   return (
     <div className="flex flex-1 min-h-0">
       <DocumentRail
-        resume={activeResume}
-        jobs={activeJobs}
+        resume={resume}
+        jobs={jobs}
         scope={scope}
         onScopeChange={setScope}
         onManageDocuments={() => onNavigate("setup")}
@@ -60,42 +129,44 @@ export function ChatScreen({ onNavigate, chatState, onChatStateChange }: ChatScr
           <ScopeBar
             scope={scope}
             onScopeChange={setScope}
-            jobs={activeJobs}
-            resumeChunks={activeResume.chunks}
+            jobs={jobs}
+            resumeChunks={resume?.chunks ?? 0}
           />
         )}
 
         {chatState === "empty" && (
-          <EmptyState onStartStreaming={() => onChatStateChange("streaming")} />
+          <EmptyState onSubmit={handleSubmit} />
         )}
-        {chatState === "thread" && (
+        {(chatState === "thread" || chatState === "noresults") && (
           <MessageThread
+            exchanges={exchanges}
             expandedChips={expandedChips}
-            onChipToggle={handleChipToggle}
+            onChipToggle={(id) => setExpandedChips((prev) => ({ ...prev, [id]: !prev[id] }))}
             sourcesOpen={sourcesOpen}
-            onSourcesToggle={handleSourcesToggle}
+            onSourcesToggle={(id) => setSourcesOpen((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }))}
           />
         )}
-        {chatState === "streaming" && (
-          <StreamingMessage onStop={() => onChatStateChange("thread")} />
+        {chatState === "streaming" && streaming && (
+          <StreamingMessage
+            userMessage={streaming.userMessage}
+            citations={streaming.citations}
+            partialText={streaming.partialText}
+            onStop={handleStop}
+          />
         )}
-        {chatState === "error" && (
+        {chatState === "error" && errorInfo && (
           <ErrorMessage
-            userMessage={ERROR_USER_MESSAGE}
-            onRetry={() => onChatStateChange("streaming")}
-          />
-        )}
-        {chatState === "noresults" && (
-          <MessageThread
-            exchanges={[NO_RESULTS_EXCHANGE]}
-            expandedChips={expandedChips}
-            onChipToggle={handleChipToggle}
-            sourcesOpen={sourcesOpen}
-            onSourcesToggle={handleSourcesToggle}
+            userMessage={errorInfo.userMessage}
+            detail={`${errorInfo.code}${errorInfo.requestId ? ` · ${errorInfo.requestId}` : ""}`}
+            onRetry={() => { void handleSubmit(errorInfo.userMessage); }}
           />
         )}
 
-        <Composer scopeLabel={scopeLabel} />
+        <Composer
+          scopeLabel={scopeLabel}
+          onSubmit={handleSubmit}
+          disabled={chatState === "streaming"}
+        />
       </div>
     </div>
   );
