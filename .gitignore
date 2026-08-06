@@ -26,4 +26,4 @@ npm-debug.log*
 !docs/**/*.pdf
 
 # internal planning, not part of the submission
-PROJECT_PLAN.md
+PROJECT_PLAN.md*.egg-info/
