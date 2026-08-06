@@ -3,7 +3,6 @@ from typing import TypeVar
 
 from app.db.repositories.chunk import ChunkRepository
 from app.db.repositories.job import JobRepository
-from app.db.models import Chunk
 from app.rag.embedder import Embedder
 from app.schemas.chat import Citation
 
@@ -131,7 +130,7 @@ class RetrievalService:
 
     # ------------------------------------------------------------------
 
-    def _to_citation(self, chunk: Chunk, score: float, kind: str) -> Citation:
+    def _to_citation(self, chunk, score: float, kind: str) -> Citation:
         meta = chunk.meta
         index = meta.get("chunk_index", "?")
         total = meta.get("total", "?")
