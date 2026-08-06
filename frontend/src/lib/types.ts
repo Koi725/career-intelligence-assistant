@@ -6,8 +6,6 @@ export type Screen = "setup" | "chat" | "fit";
 export type JobMode = "paste" | "upload";
 export type ChatState = "empty" | "thread" | "streaming" | "error" | "noresults";
 export type Scope = "all" | string;
-export type StreamPhase = 0 | 1 | 2 | 3;
-
 export interface ResumeDoc {
   filename: string;
   pages: number;
@@ -59,20 +57,4 @@ export interface Exchange {
   citations: Citation[];
   footer: ExchangeFooter;
   note?: string;
-}
-
-export interface FitAxis {
-  label: string;
-  score: number;
-  justification: string;
-}
-
-export interface FitCard {
-  jobId: string;
-  jobNumber: number;
-  title: string;
-  company: string;
-  overallScore: number;
-  verdict: string;
-  axes: FitAxis[];
 }
