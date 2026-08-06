@@ -122,14 +122,12 @@ Stream a chat response as Server-Sent Events. Conversation history is passed by 
 }
 ```
 
-SSE event stream:
+SSE event stream — four event types, in order:
 
-| Event | Payload |
-|-------|---------|
-| `sources` | `[Citation, ...]` — retrieved chunks, fired before generation |
-| `delta` | `{ "text": "..." }` — one token or small chunk of generated text |
-| `done` | `{ "sections": [AnswerSection, ...], "footer": ExchangeFooter }` |
-| `error` | `{ "code": "...", "request_id": "..." }` |
+- `sources` — `[Citation, ...]`: the retrieved chunks, sent before any text is generated
+- `delta` — `{ "text": "..." }`: one token or small chunk of streaming text
+- `done` — `{ "sections": [AnswerSection, ...], "footer": ExchangeFooter }`: the fully parsed answer with billing metadata
+- `error` — `{ "code": "...", "request_id": "..." }`: sent instead of `done` on failure
 
 ### `GET /health`
 
@@ -153,7 +151,7 @@ For a hot-reload development loop the backend volume-mounts `./backend:/app`, so
 docker compose run --rm --no-deps backend sh -c "PYTHONPATH=/app pytest tests/ -q"
 ```
 
-All tests are hermetic — no live database, no real API calls. The `Embedder` protocol is faked; the Anthropic client is mocked at its boundary.
+No live database, no network calls. The `Embedder` protocol is satisfied by a deterministic fake; the Anthropic client is mocked at the SDK boundary.
 
 ## Adding an endpoint
 
