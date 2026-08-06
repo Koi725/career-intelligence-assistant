@@ -127,7 +127,7 @@ Followed: strict api → services → repositories → db layering with no skipp
 
 Skipped intentionally, and documented: Alembic (the demo has no data to lose and the reset path is `docker compose down -v`); the async SQLAlchemy driver (the one endpoint that needs async waits on Claude, not Postgres); `httpx2` (the deprecation warning fires in tests but nothing is broken and the fix is a one-line swap).
 
-33 backend tests (pytest, hermetic — fake Embedder, mocked Anthropic client) and 31 frontend component tests (vitest); the SSE client, end-to-end browser flow, and Fit screen are not covered by automated tests.
+Backend: pytest, hermetic — fake Embedder, mocked Anthropic client, route contract tests for every endpoint. Frontend: vitest component tests. SSE client and end-to-end browser flow are not covered by automated tests.
 
 ## How I used AI tools
 
@@ -148,7 +148,7 @@ The pattern that paid off most: stating in advance what the model should not do.
 7. **Uploading the same resume twice creates two records.** No content hash or deduplication. Both are indexed; the model sees duplicate passages with different source labels.
 8. **The context budget uses a proxy tokenizer.** `tiktoken` with `cl100k_base` diverges from Claude's tokenizer by roughly 5–15%.
 9. **The 3-job limit is enforced by the frontend only.** A fourth job added via the API produces citations with a `kind` outside the `CitationKind` union type.
-10. **Fit analysis is not implemented.** The Fit screen shows a placeholder.
+10. **Fit analysis fires one LLM call per job concurrently.** Three jobs means three Claude calls in parallel; each draws from the daily token budget.
 
 ## What I'd change with more time
 
@@ -175,10 +175,10 @@ so "KOUSHA REZAEI" and "SENIOR ENGINEER" occasionally arrive concatenated.
 It slightly degrades embedding quality and looks careless when a reviewer
 expands a citation. A layout-aware parser would fix it.
 
-**The structured fit analysis.** Scoring each job on four axes with forced
-tool-use output was the bonus feature. I cut it deliberately rather than ship
-it half-finished, and the screen says so honestly instead of showing
-placeholder data.
+**Evaluation harness for fit scores.** The fit analysis scores are grounded in
+retrieved passages, but there is no golden set of (resume, JD, expected-score)
+tuples verifying the scores are calibrated. An LLM-as-judge loop over a fixed
+fixture set would catch prompt regressions before they reach production.
 
 **Honest caveat on the whole architecture.** At this document scale — a
 two-page resume and three job descriptions is a few thousand tokens — RAG is
