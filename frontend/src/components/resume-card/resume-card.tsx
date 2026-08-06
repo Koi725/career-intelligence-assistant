@@ -1,15 +1,16 @@
 "use client";
 
+import { useRef } from "react";
 import { FileText, Upload, X } from "lucide-react";
 
 import { useDocuments } from "@/hooks/use-documents";
-import { RESUME } from "@/data/resume/resume-data";
 import { cn } from "@/lib/utils";
 
 import { BlueprintCard } from "@/components/blueprint-card";
 
 export function ResumeCard() {
-  const { resume, setResume } = useDocuments();
+  const { resume, uploadResume, uploadingResume, uploadError, clearResume } = useDocuments();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <BlueprintCard>
@@ -31,7 +32,7 @@ export function ResumeCard() {
             </span>
           </div>
           <button
-            onClick={() => setResume(null)}
+            onClick={clearResume}
             aria-label="Remove resume"
             className={cn(
               "flex h-remove-btn w-remove-btn flex-none items-center justify-center border border-hairline",
@@ -43,20 +44,40 @@ export function ResumeCard() {
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setResume(RESUME)}
-          aria-label="Upload resume"
-          className={cn(
-            "flex w-full flex-col items-center justify-center gap-2 py-11",
-            "border border-dashed border-hairline-dashed",
-            "hover:border-accent hover:bg-panel",
-            "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+        <div className="flex flex-col">
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadResume(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={uploadingResume}
+            aria-label="Upload resume"
+            className={cn(
+              "flex w-full flex-col items-center justify-center gap-2 py-11",
+              "border border-dashed border-hairline-dashed",
+              "hover:border-accent hover:bg-panel",
+              "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+              uploadingResume && "cursor-wait opacity-60"
+            )}
+          >
+            <Upload size={26} className="text-accent" strokeWidth={1.5} />
+            <span className="font-heading text-lg font-medium text-fg">
+              {uploadingResume ? "Uploading…" : "Drop your resume here"}
+            </span>
+            <span className="text-sm text-faint">or click to browse · PDF, up to 5 MB</span>
+          </button>
+          {uploadError && (
+            <p className="px-5 py-2 text-xs text-score-low">{uploadError}</p>
           )}
-        >
-          <Upload size={26} className="text-accent" strokeWidth={1.5} />
-          <span className="font-heading text-lg font-medium text-fg">Drop your resume here</span>
-          <span className="text-sm text-faint">or click to browse · PDF, up to 10 MB</span>
-        </button>
+        </div>
       )}
     </BlueprintCard>
   );

@@ -1,9 +1,9 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { Plus, Upload, X } from "lucide-react";
 
 import { useDocuments } from "@/hooks/use-documents";
-import { JOBS } from "@/data/jobs/jobs-data";
 import { cn } from "@/lib/utils";
 
 import { BlueprintCard } from "@/components/blueprint-card";
@@ -14,9 +14,20 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 export function JobsCard() {
-  const { jobs, addJob, removeJob, jobMode, setJobMode } = useDocuments();
+  const {
+    jobs, addJobFromText, addJobFromFile, removeJob,
+    addingJob, jobError, jobMode, setJobMode,
+  } = useDocuments();
+  const [pasteText, setPasteText] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const hasMoreJobs = JOBS.some((j) => !jobs.some((existing) => existing.id === j.id));
+  const canAddMore = jobs.length < 3;
+
+  const handlePasteSubmit = () => {
+    if (!pasteText.trim() || !canAddMore) return;
+    addJobFromText(pasteText.trim());
+    setPasteText("");
+  };
 
   return (
     <BlueprintCard>
@@ -57,40 +68,61 @@ export function JobsCard() {
           <div className="flex flex-col gap-2">
             <textarea
               rows={4}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
               placeholder="Paste the full job description here — title, company, responsibilities, requirements."
               className="w-full resize-none border border-hairline-control bg-inset px-3 py-2 text-sm text-fg placeholder:text-faint focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
             />
             <div className="flex items-center justify-between">
               <span className="text-xs text-faint">Title and company are detected automatically.</span>
               <button
-                onClick={addJob}
-                disabled={!hasMoreJobs}
+                onClick={handlePasteSubmit}
+                disabled={!pasteText.trim() || !canAddMore || addingJob}
                 aria-label="Add job description"
                 className={cn(
                   "flex items-center gap-1.5 border border-hairline px-3 py-1.5 text-sm text-fg",
                   "hover:bg-control focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
-                  !hasMoreJobs && "cursor-not-allowed opacity-40"
+                  (!pasteText.trim() || !canAddMore || addingJob) && "cursor-not-allowed opacity-40"
                 )}
               >
                 <Plus size={14} strokeWidth={1.5} />
-                Add job description
+                {addingJob ? "Adding…" : "Add job description"}
               </button>
             </div>
           </div>
         ) : (
-          <button
-            onClick={addJob}
-            disabled={!hasMoreJobs}
-            className={cn(
-              "flex w-full flex-col items-center justify-center gap-2 py-8",
-              "border border-dashed border-hairline-dashed",
-              "hover:border-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
-              !hasMoreJobs && "cursor-not-allowed opacity-40"
-            )}
-          >
-            <Upload size={20} className="text-accent" strokeWidth={1.5} />
-            <span className="text-sm text-faint">Drop a PDF here or click to browse</span>
-          </button>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) addJobFromFile(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!canAddMore || addingJob}
+              className={cn(
+                "flex w-full flex-col items-center justify-center gap-2 py-8",
+                "border border-dashed border-hairline-dashed",
+                "hover:border-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+                (!canAddMore || addingJob) && "cursor-not-allowed opacity-40"
+              )}
+            >
+              <Upload size={20} className="text-accent" strokeWidth={1.5} />
+              <span className="text-sm text-faint">
+                {addingJob ? "Uploading…" : "Drop a PDF here or click to browse"}
+              </span>
+            </button>
+          </>
+        )}
+
+        {jobError && (
+          <p className="text-xs text-score-low">{jobError}</p>
         )}
 
         {jobs.length === 0 ? (

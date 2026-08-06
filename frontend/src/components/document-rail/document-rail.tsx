@@ -6,16 +6,12 @@ import type { Scope } from "@/lib/types";
 
 import type { DocumentRailProps } from "./document-rail.types";
 
-const TOTAL_CHUNKS = 90;
-
 export function DocumentRail({ resume, jobs, scope, onScopeChange, onManageDocuments }: DocumentRailProps) {
+  const resumeChunks = resume ? resume.chunks : 0;
+  const totalChunks = resumeChunks + jobs.reduce((s, j) => s + j.chunks, 0);
   const indexedChunks = scope === "all"
-    ? TOTAL_CHUNKS
-    : (() => {
-        const job = jobs.find((j) => j.id === scope);
-        const resumeChunks = resume ? resume.chunks : 0;
-        return resumeChunks + (job ? job.chunks : 0);
-      })();
+    ? totalChunks
+    : resumeChunks + (jobs.find((j) => j.id === scope)?.chunks ?? 0);
 
   return (
     <aside className="flex w-64 flex-none flex-col overflow-auto border-r border-hairline bg-header p-4 gap-5">
