@@ -1,8 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from openai import OpenAI
-
-from app.config import settings
+from fastembed import TextEmbedding
 
 
 @runtime_checkable
@@ -11,13 +9,11 @@ class Embedder(Protocol):
         ...
 
 
-class OpenAIEmbedder:
+class LocalEmbedder:
     def __init__(self) -> None:
-        self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self._model = settings.EMBEDDING_MODEL
+        self._model = TextEmbedding("BAAI/bge-small-en-v1.5")
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        response = self._client.embeddings.create(input=texts, model=self._model)
-        return [item.embedding for item in response.data]
+        return [emb.tolist() for emb in self._model.embed(texts)]
