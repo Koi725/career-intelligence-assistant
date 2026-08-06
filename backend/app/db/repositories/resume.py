@@ -20,5 +20,8 @@ class ResumeRepository:
         self._db.flush()
         return record
 
+    def has_any(self) -> bool:
+        return self._db.query(Resume.id).limit(1).scalar() is not None
+
     def get(self, resume_id: uuid.UUID) -> Resume | None:
         return self._db.get(Resume, resume_id)
