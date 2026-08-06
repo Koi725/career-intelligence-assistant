@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.llm.claude import ClaudeClient
 from app.rag.chunker import Chunker
 from app.rag.embedder import LocalEmbedder
+from app.services.analysis import AnalysisService
 from app.services.chat import ChatService
 from app.services.ingestion import IngestionService
 from app.services.retrieval import RetrievalService
@@ -26,6 +27,21 @@ def get_ingestion_service(db: Session = Depends(get_db)) -> IngestionService:
         chunk_repo=ChunkRepository(db),
         chunker=_chunker,
         embedder=_embedder,
+        claude=ClaudeClient(),
+    )
+
+
+def get_analysis_service(db: Session = Depends(get_db)) -> AnalysisService:
+    retrieval = RetrievalService(
+        chunk_repo=ChunkRepository(db),
+        job_repo=JobRepository(db),
+        embedder=_embedder,
+        floor=settings.SIMILARITY_THRESHOLD,
+    )
+    return AnalysisService(
+        retrieval=retrieval,
+        job_repo=JobRepository(db),
+        resume_repo=ResumeRepository(db),
         claude=ClaudeClient(),
     )
 
