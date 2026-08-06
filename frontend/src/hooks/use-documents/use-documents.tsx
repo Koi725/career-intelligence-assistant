@@ -1,17 +1,23 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-import { JOBS } from "@/data/jobs/jobs-data";
+import * as api from "@/lib/api";
 import type { JobDoc, JobMode, ResumeDoc } from "@/lib/types";
 
 interface DocumentsContextValue {
   resume: ResumeDoc | null;
-  setResume: (doc: ResumeDoc | null) => void;
+  uploadResume: (file: File) => void;
+  uploadingResume: boolean;
+  uploadError: string | null;
+  clearResume: () => void;
   jobs: JobDoc[];
-  addJob: () => void;
+  addJobFromText: (text: string) => void;
+  addJobFromFile: (file: File) => void;
   removeJob: (id: string) => void;
+  addingJob: boolean;
+  jobError: string | null;
   jobMode: JobMode;
   setJobMode: (mode: JobMode) => void;
   canContinue: boolean;
@@ -20,24 +26,73 @@ interface DocumentsContextValue {
 
 interface DocumentsProviderProps {
   children: ReactNode;
+  // Seed props for tests — when provided, the API fetch on mount is skipped.
   initialResume?: ResumeDoc | null;
   initialJobs?: JobDoc[];
 }
 
 const DocumentsContext = createContext<DocumentsContextValue | null>(null);
 
-export function DocumentsProvider({ children, initialResume = null, initialJobs = [] }: DocumentsProviderProps) {
+export function DocumentsProvider({
+  children,
+  initialResume = null,
+  initialJobs,
+}: DocumentsProviderProps) {
   const [resume, setResume] = useState<ResumeDoc | null>(initialResume);
-  const [jobs, setJobs] = useState<JobDoc[]>(initialJobs);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<JobDoc[]>(initialJobs ?? []);
+  const [addingJob, setAddingJob] = useState(false);
+  const [jobError, setJobError] = useState<string | null>(null);
   const [jobMode, setJobMode] = useState<JobMode>("paste");
 
-  const addJob = () => {
-    const next = JOBS.find((j) => !jobs.some((existing) => existing.id === j.id));
-    if (next) setJobs((prev) => [...prev, next]);
+  useEffect(() => {
+    // Skip when initial state is explicitly provided (e.g., in component tests).
+    if (initialJobs !== undefined) return;
+    api.listJobs().then(setJobs).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const uploadResume = (file: File) => {
+    setUploadingResume(true);
+    setUploadError(null);
+    api.uploadResume(file)
+      .then(setResume)
+      .catch((err: unknown) =>
+        setUploadError(err instanceof Error ? err.message : "Upload failed.")
+      )
+      .finally(() => setUploadingResume(false));
+  };
+
+  const clearResume = () => setResume(null);
+
+  const addJobFromText = (text: string) => {
+    setAddingJob(true);
+    setJobError(null);
+    api.createJobFromText(text)
+      .then((job) => setJobs((prev) => [...prev, job]))
+      .catch((err: unknown) =>
+        setJobError(err instanceof Error ? err.message : "Failed to add job.")
+      )
+      .finally(() => setAddingJob(false));
+  };
+
+  const addJobFromFile = (file: File) => {
+    setAddingJob(true);
+    setJobError(null);
+    api.createJobFromFile(file)
+      .then((job) => setJobs((prev) => [...prev, job]))
+      .catch((err: unknown) =>
+        setJobError(err instanceof Error ? err.message : "Failed to add job.")
+      )
+      .finally(() => setAddingJob(false));
   };
 
   const removeJob = (id: string) => {
-    setJobs((prev) => prev.filter((j) => j.id !== id));
+    api.deleteJob(id)
+      .then(() => setJobs((prev) => prev.filter((j) => j.id !== id)))
+      .catch((err: unknown) =>
+        setJobError(err instanceof Error ? err.message : "Failed to remove job.")
+      );
   };
 
   const canContinue = !!resume && jobs.length > 0;
@@ -53,7 +108,11 @@ export function DocumentsProvider({ children, initialResume = null, initialJobs 
 
   return (
     <DocumentsContext.Provider
-      value={{ resume, setResume, jobs, addJob, removeJob, jobMode, setJobMode, canContinue, blockedReason }}
+      value={{
+        resume, uploadResume, uploadingResume, uploadError, clearResume,
+        jobs, addJobFromText, addJobFromFile, removeJob, addingJob, jobError,
+        jobMode, setJobMode, canContinue, blockedReason,
+      }}
     >
       {children}
     </DocumentsContext.Provider>
