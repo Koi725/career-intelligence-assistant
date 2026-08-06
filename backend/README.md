@@ -145,6 +145,8 @@ docker compose up backend
 
 For a hot-reload development loop the backend volume-mounts `./backend:/app`, so file changes are reflected immediately.
 
+> **Production note:** this image installs the `dev` extra (`pytest`, `httpx`) because this compose stack is a local development setup. A production image should use a multi-stage build and install only the base dependencies with `pip install --no-cache-dir .`.
+
 ## Running tests
 
 ```bash
