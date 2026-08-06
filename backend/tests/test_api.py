@@ -149,6 +149,18 @@ def test_chat_before_resume_returns_400(client_with_chat):
     assert "resume" in response.json()["detail"].lower()
 
 
+def test_delete_job_returns_204(client):
+    """DELETE /api/jobs/{id} delegates to the service and returns 204 No Content."""
+    svc = MagicMock(spec=IngestionService)
+    app.dependency_overrides[deps.get_ingestion_service] = lambda: svc
+    try:
+        response = client.delete("/api/jobs/00000000-0000-0000-0000-000000000001")
+    finally:
+        app.dependency_overrides.pop(deps.get_ingestion_service, None)
+    assert response.status_code == 204
+    svc.delete_job.assert_called_once()
+
+
 @pytest.mark.parametrize("client_with_chat", [True], indirect=True)
 def test_chat_sse_event_sequence(client_with_chat):
     """SSE stream delivers sources → delta(s) → done in that order."""
