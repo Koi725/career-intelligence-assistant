@@ -32,6 +32,10 @@ class DailyTokenLimitExceeded(DomainError):
     pass
 
 
+class JobNotFound(DomainError):
+    pass
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(UnsupportedFileType)
     async def _unsupported(_: Request, exc: UnsupportedFileType) -> JSONResponse:
@@ -56,3 +60,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DailyTokenLimitExceeded)
     async def _rate_limit(_: Request, exc: DailyTokenLimitExceeded) -> JSONResponse:
         return JSONResponse(status_code=429, content={"detail": exc.message})
+
+    @app.exception_handler(JobNotFound)
+    async def _job_not_found(_: Request, exc: JobNotFound) -> JSONResponse:
+        return JSONResponse(status_code=404, content={"detail": exc.message})
