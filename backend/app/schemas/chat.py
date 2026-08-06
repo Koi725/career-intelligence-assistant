@@ -27,6 +27,9 @@ class ExchangeFooter(_CamelBase):
     cost_dollars: float
     model: str
     chunks: int
+    # Server-side only for now — types.ts does not declare this field yet.
+    # Frontend ignores unknown keys; surfacing it in the UI is future work.
+    truncated: bool = False
 
 
 class ChatRequest(_CamelBase):
