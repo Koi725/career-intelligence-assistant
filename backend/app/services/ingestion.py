@@ -1,10 +1,11 @@
 import io
 import logging
+import uuid
 
 from pypdf import PdfReader
 from sqlalchemy.orm import Session
 
-from app.core.errors import EmptyDocument, FileTooLarge, TooManyPages, UnsupportedFileType
+from app.core.errors import EmptyDocument, FileTooLarge, JobNotFound, TooManyPages, UnsupportedFileType
 from app.db.repositories.chunk import ChunkRepository
 from app.db.repositories.job import JobRepository
 from app.db.repositories.resume import ResumeRepository
@@ -105,6 +106,12 @@ class IngestionService:
                 "PDF contains no extractable text — try a text-based PDF rather than a scan."
             )
         return self._ingest_job(text="\n\n".join(pages), source="pdf")
+
+    def delete_job(self, job_id: uuid.UUID) -> None:
+        self._chunk_repo.delete_for_source("job", job_id)
+        if not self._job_repo.delete(job_id):
+            raise JobNotFound(f"Job {job_id} not found.")
+        self._db.commit()
 
     def list_jobs(self) -> list[JobDoc]:
         jobs = self._job_repo.list_all()
