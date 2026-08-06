@@ -16,6 +16,11 @@ class ChunkRepository:
         self._db.flush()
         return records
 
+    def delete_for_source(self, source_type: str, source_id: uuid.UUID) -> None:
+        self._db.query(Chunk).filter(
+            Chunk.source_type == source_type, Chunk.source_id == source_id
+        ).delete()
+
     def count_for_source(self, source_type: str, source_id: uuid.UUID) -> int:
         return (
             self._db.query(Chunk)

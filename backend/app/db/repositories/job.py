@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy.orm import Session
 
 from app.db.models import Job
@@ -20,6 +22,13 @@ class JobRepository:
         self._db.add(record)
         self._db.flush()
         return record
+
+    def delete(self, job_id: uuid.UUID) -> bool:
+        record = self._db.query(Job).filter(Job.id == job_id).first()
+        if record is None:
+            return False
+        self._db.delete(record)
+        return True
 
     def list_all(self) -> list[Job]:
         return self._db.query(Job).order_by(Job.uploaded_at.desc()).all()
