@@ -25,7 +25,7 @@ export function ResumeCard() {
           <div className="flex flex-1 min-w-0 items-center gap-3">
             <span className="text-sm text-fg truncate">{resume.filename}</span>
             <span className="font-mono text-xs text-faint whitespace-nowrap flex-none">
-              {resume.pages} pages · {resume.chunks} chunks · {resume.sizeKb} KB
+              {resume.pages} {resume.pages === 1 ? "page" : "pages"} · {resume.chunks} {resume.chunks === 1 ? "chunk" : "chunks"} · {resume.sizeKb} KB
             </span>
             <span className="flex-none border border-good-border bg-good-bg px-1.5 py-0.5 font-mono text-xs uppercase tracking-widest text-score-good">
               PARSED
