@@ -149,7 +149,7 @@ export function JobsCard() {
                 <span className="flex-none border border-hairline-control px-1.5 py-0.5 font-mono text-xs uppercase tracking-widest text-faint">
                   {SOURCE_LABEL[job.source]}
                 </span>
-                <span className="flex-none font-mono text-xs text-faint">{job.chunks} chunks</span>
+                <span className="flex-none font-mono text-xs text-faint">{job.chunks} {job.chunks === 1 ? "chunk" : "chunks"}</span>
                 <button
                   onClick={() => removeJob(job.id)}
                   aria-label={`Remove ${job.title}`}
