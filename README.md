@@ -1,6 +1,6 @@
 # Career Intelligence Assistant
 
-A retrieval-augmented career companion: upload your resume and target job descriptions, then ask the assistant how your experience aligns. Answers are grounded exclusively in your documents — the model cannot invent skills or employers that do not appear in the text.
+Upload your resume and target job descriptions, ask the assistant how your experience aligns. Answers are grounded in your documents — the model cannot invent skills or employers that do not appear in the text.
 
 <!-- STUB: Kousha fills this in — one paragraph on the motivation and what you learned building it -->
 
@@ -13,6 +13,33 @@ cp .env.example .env       # or create .env manually — see SETUP.md
 ```
 
 The browser opens automatically at `http://localhost:3000`. See [SETUP.md](./SETUP.md) for prerequisites and troubleshooting.
+
+---
+
+## See it work
+
+This is the exact sequence to demonstrate the app end-to-end.
+
+1. **Open the app** at `http://localhost:3000`. The Setup screen shows two cards: Resume and Job Descriptions.
+
+2. **Upload your resume.** Click the dashed upload area in the Resume card, pick a PDF. While the file is processing you see "Uploading…"; once it finishes the card switches to `resume.pdf · 3 pages · 18 chunks · PARSED`. The chunk count tells you how many passages are in the index.
+
+3. **Add a job description.** Paste the full text of a job posting into the textarea and click "Add job description". The title and company are extracted automatically. The job appears as `01 — [Title] · [Company]` with a chunk count.
+
+4. **Continue to chat.** The gate bar at the bottom shows "1 resume · 1 job description indexed and ready." Click **CONTINUE TO CHAT**.
+
+5. **Ask a question.** Either click one of the four prompt suggestions on the empty state or type your own — something like "How well does my background match the requirements?" and press Enter.
+
+6. **Watch retrieval happen.** The streaming panel cycles through three phases:
+   - *Retrieving…* — the query is being embedded and ANN search is running
+   - *Reading 5 sources…* — chunks have been retrieved; generation is about to start
+   - *Generating answer…* — text is streaming from Claude
+
+7. **Read the answer.** The response is structured in two to four sections with `## Heading` lines and bold-lead bullets. Each source that was cited appears as a chip below the question. Click a chip to expand the raw passage.
+
+8. **Try a follow-up.** Conversation history is included in the context window, so the model can refer to what it said before. Note that retrieval does not rewrite the follow-up question — it embeds the raw follow-up text — so very short follow-ups ("what about Python?") may retrieve different chunks than the first question.
+
+9. **Try the scope selector.** In the left rail, click a specific job to restrict retrieval to that job's chunks. The scope bar at the top confirms which job is active.
 
 ---
 
@@ -41,20 +68,20 @@ All three services are defined in `docker-compose.yml`. The frontend container d
 ```mermaid
 sequenceDiagram
     participant Client
-    participant API as POST /api/resume<br/>(or /api/jobs)
+    participant API as POST /api/resume
     participant Svc as IngestionService
     participant Chunker
-    participant Embedder as Embedder<br/>(BGE small)
+    participant Embedder as BGE Embedder
     participant DB
 
-    Client->>API: PDF bytes (or text)
+    Client->>API: PDF bytes
     API->>Svc: ingest_resume(data, filename)
-    Svc->>Svc: pypdf → plain text
+    Svc->>Svc: pypdf to plain text
     Svc->>Chunker: chunk(text, size=512, overlap=64)
-    Chunker-->>Svc: [Chunk, ...]
-    Svc->>Embedder: embed_batch([chunk texts])
-    Embedder-->>Svc: [[float, ...], ...]
-    Svc->>DB: INSERT Resume + Chunks with vectors
+    Chunker-->>Svc: Chunk list
+    Svc->>Embedder: embed_batch(chunk texts)
+    Embedder-->>Svc: float vectors
+    Svc->>DB: INSERT Resume and Chunks
     DB-->>Svc: resume_id
     Svc-->>API: ResumeDoc
     API-->>Client: 200 ResumeDoc
@@ -71,24 +98,24 @@ sequenceDiagram
     participant Prompts as prompts.py
     participant Claude as Anthropic API
 
-    Browser->>API: {message, scope, history}
+    Browser->>API: message, scope, history
     API->>Ret: retrieve(message, scope)
-    Ret->>Ret: embed query (BGE small)
-    Ret->>DB: ANN search — resume chunks (top 6)
-    Ret->>DB: ANN search — job chunks, scoped (top 4 per job)
+    Ret->>Ret: embed query
+    Ret->>DB: ANN search resume chunks top 6
+    Ret->>DB: ANN search job chunks scoped top 4
     DB-->>Ret: raw results
-    Ret-->>API: citations[], empty_sources[]
-    API-->>Browser: SSE event: sources
+    Ret-->>API: citations, empty_sources
+    API-->>Browser: SSE sources event
     API->>Prompts: assemble_context(citations)
-    Note over Prompts: drop lowest-score chunks<br/>if > 6,000-token budget
-    API->>Claude: stream(system_prompt + context, history)
+    Note over Prompts: drop lowest-score chunks if over budget
+    API->>Claude: stream with system prompt and history
     loop token streaming
         Claude-->>API: text delta
-        API-->>Browser: SSE event: delta
+        API-->>Browser: SSE delta event
     end
     Claude-->>API: stop_reason
-    API->>Prompts: parser.parse(full_text)
-    API-->>Browser: SSE event: done {sections, footer}
+    API->>Prompts: parser.parse(full text)
+    API-->>Browser: SSE done event
 ```
 
 ### Retrieval scoping
@@ -100,14 +127,14 @@ flowchart TD
     Embed --> Scope{scope?}
     Scope -->|"all"| AllJobs["ANN search each job\ntop 4 per job"]
     Scope -->|"job_id"| OneJob["ANN search\nthat job only\ntop 4"]
-    Resume --> Filter["score ≥ threshold\n(default 0.3)"]
+    Resume --> Filter["score >= threshold\n(default 0.3)"]
     AllJobs --> Filter
     OneJob --> Filter
     Filter --> Budget["6,000-token context budget\ndrop lowest-score chunks first"]
-    Budget --> Prompt["Build system prompt\n+ context block"]
+    Budget --> Prompt["Build system prompt\nand context block"]
 ```
 
-Two separate ANN queries are used deliberately: a single top-k over all chunks would return only job description text when the job description is long, leaving the model with no evidence about the candidate.
+Two separate ANN queries run for every request: one against resume chunks, one against job chunks. A single global top-k would return only job-description text on verbose postings, leaving no evidence about the candidate.
 
 ### Database schema
 
@@ -140,27 +167,146 @@ erDiagram
         timestamptz created_at
     }
 
-    RESUME ||--o{ CHUNK : "source_type = 'resume'"
-    JOB    ||--o{ CHUNK : "source_type = 'job'"
+    RESUME ||--o{ CHUNK : "source_type=resume"
+    JOB    ||--o{ CHUNK : "source_type=job"
 ```
 
-`source_type` + `source_id` is a soft foreign key. There is no enforced FK constraint — this keeps the delete path simple: the service deletes chunks by source, then deletes the parent row, both in the same transaction.
+`source_type` + `source_id` is a soft foreign key. There is no enforced FK constraint, which keeps the delete path simple: `ChunkRepository.delete_for_source` runs first, then `JobRepository.delete`, both committed in a single transaction by the service.
+
+---
+
+## How retrieval works
+
+When a question arrives, the backend embeds it with the same BGE small model used at ingestion time. It then runs two separate cosine ANN searches: one against resume chunks (top 6 candidates) and one against job chunks (top 4 per job if scope is "all", or top 6 from a single job if a specific job is selected).
+
+Results from both searches are filtered by a similarity floor — default 0.30 on a 0–1 cosine similarity scale. Chunks that score below the floor are discarded before the model sees them. Sources that produced zero passing chunks are noted explicitly in the context block so the model can say "no evidence found" rather than guessing.
+
+Passing chunks are ranked by score. If they would exceed the 6,000-token context budget (estimated with `cl100k_base` as a proxy), the lowest-scoring chunks are dropped until the budget is met. The backend logs when truncation occurs; the frontend does not surface it to the user.
+
+The assembled context is injected into the system prompt alongside a set of formatting rules, and the conversation history is passed as the messages array. History provides the model with conversational continuity, but the retrieval query is always the raw new message — there is no query rewriting to account for follow-up phrasing.
 
 ---
 
 ## API reference
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/resume` | Upload resume PDF |
-| `POST` | `/api/jobs` | Add job (text or PDF) |
-| `GET` | `/api/jobs` | List all jobs |
-| `DELETE` | `/api/jobs/{id}` | Delete job and its chunks |
-| `POST` | `/api/chat` | Stream chat response (SSE) |
-| `GET` | `/health` | Liveness probe |
-| `GET` | `/api/metrics` | In-process counters |
+### `POST /api/resume`
 
-Interactive documentation: `http://localhost:8000/docs`
+Upload a PDF resume.
+
+```bash
+curl -X POST http://localhost:8000/api/resume \
+  -F "file=@resume.pdf;type=application/pdf"
+```
+
+```json
+{
+  "id": "f3a9e2b1-7c4d-4a8e-b2f1-9e3d5c6a7b8c",
+  "filename": "resume.pdf",
+  "pages": 1,
+  "chunks": 1,
+  "sizeKb": 0.8
+}
+```
+
+### `POST /api/jobs`
+
+Add a job from pasted text. Provide exactly one of `text` or `file`.
+
+```bash
+curl -X POST http://localhost:8000/api/jobs \
+  -F 'text=Senior Frontend Engineer at Acme. We are looking for a React expert with 5+ years of experience...'
+```
+
+```json
+{
+  "id": "bc48850b-3208-4652-a349-16c33e108e33",
+  "title": "Senior Frontend Engineer",
+  "company": "Acme",
+  "location": "",
+  "source": "paste",
+  "chunks": 1
+}
+```
+
+### `GET /api/jobs`
+
+List all indexed jobs.
+
+```bash
+curl http://localhost:8000/api/jobs
+```
+
+```json
+[
+  {
+    "id": "c9948e4d-2c64-49f2-8cfa-fa0f355b44b7",
+    "title": "Full-Stack AI Engineer",
+    "company": "Perplexity",
+    "location": "San Francisco (Hybrid)",
+    "source": "paste",
+    "chunks": 1
+  }
+]
+```
+
+### `DELETE /api/jobs/{id}`
+
+Delete a job and all its indexed chunks. Returns 204 with no body on success.
+
+```bash
+curl -X DELETE http://localhost:8000/api/jobs/bc48850b-3208-4652-a349-16c33e108e33 \
+  -w "HTTP %{http_code}"
+# → HTTP 204
+```
+
+Non-existent ID:
+
+```json
+{"detail":"Job 00000000-0000-0000-0000-000000000000 not found."}
+```
+
+### `POST /api/chat`
+
+Stream a response as Server-Sent Events.
+
+```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What are the main technical skills?","scope":"all","history":[]}'
+```
+
+The response is a newline-delimited SSE stream. Each frame is `data: {...}\n\n`.
+
+```
+data: {"type":"sources","citations":[{"id":"...","kind":"Resume","label":"Jane Smith","score":0.58,"locator":"Page 1 · chunk 1 of 1","chunk":"Senior Software Engineer with 5 years..."},...]}
+
+data: {"type":"delta","text":"## Technical Skills\n\n"}
+
+data: {"type":"delta","text":"Based on the resume, the main skills are:"}
+
+data: {"type":"done","sections":[{"heading":"Technical Skills","paragraph":"...","bullets":[...]}],"footer":{"latencySeconds":8.56,"tokens":2678,"costDollars":0.0125,"model":"claude-sonnet","chunks":5,"truncated":false}}
+```
+
+`sources` fires before generation begins. The frontend uses it to switch from "Retrieving…" to "Reading N sources…". `done` contains the fully parsed answer alongside billing metadata.
+
+### `GET /health`
+
+```bash
+curl http://localhost:8000/health
+# → {"status":"ok"}
+```
+
+### `GET /api/metrics`
+
+In-process counters. Resets on container restart.
+
+```bash
+curl http://localhost:8000/api/metrics
+```
+
+```json
+{"request_count":0,"p50_latency_seconds":0.0,"p95_latency_seconds":0.0,"total_tokens":0,"total_cost_dollars":0.0}
+```
 
 ---
 
@@ -192,7 +338,11 @@ career-intelligence-assistant/
 docker compose run --rm --no-deps backend sh -c "PYTHONPATH=/app pytest tests/ -q"
 ```
 
-8 test files, hermetic (no live database, no real API calls). The `Embedder` protocol is faked with a deterministic implementation; the Anthropic client is mocked at the SDK boundary.
+8 test files. The `Embedder` protocol is satisfied by a deterministic fake; the Anthropic client is mocked at the SDK boundary. No live database, no network calls.
+
+**Covered:** chunk boundaries and overlap, context budget truncation, retrieval per-source budgets and scope logic, markdown parser for all section types, route contracts (status codes, response shapes, 422 on bad input, 404 on missing job), guardrail rejection, daily token budget enforcement, metrics accumulation.
+
+**Not covered:** the embedder itself (it calls a real model; the protocol boundary means tests inject the fake instead), the Claude client beyond the mock boundary, end-to-end SSE frame ordering, and resume upload with a real PDF (tested manually).
 
 ### Frontend
 
@@ -200,13 +350,15 @@ docker compose run --rm --no-deps backend sh -c "PYTHONPATH=/app pytest tests/ -
 cd frontend && npm test
 ```
 
-23 test files, 31 tests. Components with API dependencies use `vi.mock("@/lib/api")`. `DocumentsProvider` accepts an `initialJobs` prop to skip the `listJobs()` fetch in tests.
+23 test files, 31 tests. Components with API calls use `vi.mock("@/lib/api")`. `DocumentsProvider` accepts `initialJobs` to skip the `listJobs()` fetch in tests.
+
+**Covered:** component rendering across all states (empty, uploading, error, populated), user interactions (upload, paste, remove, submit, stop), streaming message phase transitions (Retrieving / Reading / Generating), chat screen state machine (idle → streaming → thread → error), scope bar and document rail rendering.
+
+**Not covered:** the SSE client itself (network-level streaming is hard to test hermetically without a real server), end-to-end browser flow, and the Fit screen (not implemented).
 
 ---
 
 ## Known limitations
-
-These are real constraints with real consequences, not theoretical risks.
 
 1. **pypdf loses whitespace between layout columns.** Multi-column PDF resumes are concatenated without spaces, producing fused tokens ("LeadEngineer" instead of "Lead Engineer"). Retrieval finds no matches for those fused tokens, so the model reports missing evidence for skills that are present in the document. Fix: switch to `pdfplumber` or `pymupdf`.
 
@@ -226,7 +378,7 @@ These are real constraints with real consequences, not theoretical risks.
 
 9. **The 3-job limit is enforced by the frontend only.** The backend accepts an unlimited number of jobs. If a fourth job is added by calling the API directly, its citations return `"Job 4"` as the `kind` field, which falls outside the `CitationKind` union type in `types.ts`. The citation chip renders without a colour class and the kind label is `undefined`.
 
-10. **Fit analysis is not implemented.** The Fit screen shows an empty state. The backend has no analysis endpoint; the `FitAxis` and `FitCard` data shapes were prototype scaffolding and have been removed.
+10. **Fit analysis is not implemented.** The Fit screen shows a placeholder. The backend has no analysis endpoint; the data shapes were prototype scaffolding and have been removed.
 
 ---
 
