@@ -1,4 +1,4 @@
-import type { AnswerSection, Citation, ExchangeFooter, JobDoc, ResumeDoc } from "./types";
+import type { AnswerSection, Citation, ExchangeFooter, FitCard, JobDoc, ResumeDoc } from "./types";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -43,6 +43,10 @@ export function listJobs(): Promise<JobDoc[]> {
 
 export function deleteJob(id: string): Promise<void> {
   return request<void>(`/api/jobs/${id}`, { method: "DELETE" });
+}
+
+export function analyzeFit(): Promise<FitCard[]> {
+  return request<FitCard[]>("/api/analyze", { method: "POST" });
 }
 
 export interface StreamHandlers {
