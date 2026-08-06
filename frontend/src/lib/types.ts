@@ -58,3 +58,20 @@ export interface Exchange {
   footer: ExchangeFooter;
   note?: string;
 }
+
+export interface FitAxis {
+  label: string;
+  score: number; // 0–1
+  justification: string;
+}
+
+export interface FitCard {
+  jobId: string;
+  jobNumber: number;
+  title: string;
+  company: string;
+  overallScore: number; // 0–100
+  verdict: string;
+  axes: FitAxis[];
+}
+
