@@ -2,7 +2,13 @@
 
 Upload your resume and target job descriptions, ask the assistant how your experience aligns. Answers are grounded in your documents — the model cannot invent skills or employers that do not appear in the text.
 
-<!-- STUB: Kousha fills this in — one paragraph on the motivation and what you learned building it -->
+I picked the Career Intelligence Assistant because the retrieval problem in it
+is more interesting than it looks. Answering "how do I fit this job" needs
+evidence from two different documents at once, and the naive version — embed
+the question, take the top k across everything — quietly fails: a 900-word job
+description produces more chunks than a two-page resume, so top-k comes back
+with no resume passages at all and the model fills the gap by inventing. Most
+of my thinking went into making that failure impossible rather than unlikely.
 
 ## Quick start
 
@@ -384,28 +390,137 @@ cd frontend && npm test
 
 ## AWS productionisation sketch
 
-<!-- STUB: Kousha fills this in — your recommended architecture for a production deployment on AWS. Consider: ECS Fargate vs EKS, RDS for pgvector, Secrets Manager for the API key, CloudFront in front of the Next.js app, ALB for the backend, and how you'd handle the SSE streaming through an ALB idle timeout -->
+ECS Fargate for both services. There is no Kubernetes-shaped problem here —
+two stateless containers with no custom scheduling or operators — and EKS
+would add a cluster to operate for nothing in return.
+
+RDS Postgres with pgvector for the data layer, Multi-AZ. It is the same
+extension running in Compose, so nothing about the query layer changes.
+API keys move to Secrets Manager, injected as task secrets rather than
+environment variables baked into a task definition.
+
+CloudFront in front of the Next.js app; an ALB in front of the backend.
+The SSE endpoint is the part that needs care: the ALB idle timeout defaults
+to 60 seconds, and a long generation with a slow first token can cross it
+mid-stream. I would raise the idle timeout above the maximum expected
+generation time and make sure nothing in the path buffers the response —
+CloudFront in particular will happily buffer a streaming response and destroy
+the entire point of the feature, so the API goes direct to the ALB rather than
+through the CDN.
+
+Two changes the current design would need before it could carry real traffic.
+Embedding happens synchronously during upload, which is fine for ten documents
+and wrong for a thousand — that moves to SQS plus a worker, with the upload
+returning immediately and the UI polling for indexing status. And the schema
+is single-tenant: every table would need a tenant id, every query a filter on
+it, and row-level security to make sure a missed filter fails closed instead of
+leaking someone else's resume.
 
 ---
 
 ## Design decisions
 
-<!-- STUB: Kousha fills this in — the two or three choices you'd defend in a technical interview. e.g. why sync SQLAlchemy with asyncio.to_thread rather than an async driver, why no Alembic, why two ANN queries instead of one -->
+**Two ANN queries instead of one.** This is the decision I would defend
+hardest. Retrieval runs a separate filtered query per source with its own
+budget — six chunks from the resume, six from the job in scope — rather than
+one top-k over a mixed pool. A single query lets a verbose job description
+crowd out the resume entirely, and the model then answers a question about the
+candidate with no evidence about the candidate. Per-source budgets make that
+outcome impossible by construction rather than unlikely in practice. It also
+makes retrieval a pure function of (query, scope), which is testable with a
+fake embedder and no database.
+
+**Sync SQLAlchemy with asyncio.to_thread, not an async driver.** The only
+endpoint that genuinely needs async is the SSE stream, and what it is waiting
+on is the Anthropic API, not Postgres. Retrieval is two fast indexed queries.
+Making the whole data layer async would have bought no measurable throughput
+at this scale and cost real debugging time in a two-day build. One async
+endpoint, one `to_thread` call, and the rest of the codebase stays boring.
+
+**No Alembic.** Table creation runs from SQLAlchemy metadata on startup and
+`init.sql` enables pgvector. Migrations matter when a schema evolves against
+data you cannot lose; this is a single-user demo where the reset path is
+`docker compose down -v`. Adding Alembic would have meant a migration runner
+to debug inside Docker and another failure mode on the path a reviewer walks
+first. In production it goes in on day one.
+
+**Local embeddings instead of a hosted API.** bge-small-en-v1.5 runs in the
+backend container. Two reasons: document content never leaves the deployment,
+which matters for resumes and matters more in a regulated domain, and it means
+this whole application runs with one API key instead of two. The `Embedder`
+protocol exists precisely so that swapping to Voyage or OpenAI is a twenty-line
+change if retrieval quality ever becomes the bottleneck.
 
 ---
 
 ## What I'd change with more time
 
-<!-- STUB: Kousha fills this in — honest prioritised list. Show the reviewer you know where the rough edges are -->
+In rough priority order.
+
+**Query rewriting for follow-ups.** Retrieval embeds the question as typed.
+Ask "what about the other one?" and it retrieves on those five words. I
+mitigate it by prepending the previous user turn to the retrieval query, which
+helps and does not solve it. The real fix is a cheap model call rewriting the
+follow-up into a standalone question before embedding.
+
+**A real evaluation harness.** I have unit tests proving retrieval honours its
+budgets and its floor. I do not have anything proving the answers are good.
+The next step is a golden set of (resume, JD, question, expected-signal) tuples
+run on every prompt change, then LLM-as-judge for the subjective half.
+
+**Hybrid retrieval.** Semantic only today. Job descriptions are full of exact
+tokens — "Kubernetes", "FastAPI", "five years" — where BM25 beats embeddings
+outright. Reciprocal rank fusion over both would measurably improve skill-gap
+answers.
+
+**Better PDF extraction.** pypdf drops whitespace between some layout lines,
+so "KOUSHA REZAEI" and "SENIOR ENGINEER" occasionally arrive concatenated.
+It slightly degrades embedding quality and looks careless when a reviewer
+expands a citation. A layout-aware parser would fix it.
+
+**The structured fit analysis.** Scoring each job on four axes with forced
+tool-use output was the bonus feature. I cut it deliberately rather than ship
+it half-finished, and the screen says so honestly instead of showing
+placeholder data.
+
+**Honest caveat on the whole architecture.** At this document scale — a
+two-page resume and three job descriptions is a few thousand tokens — RAG is
+arguably unnecessary. Injecting every document into a 200k context window
+would be simpler and would give better answers today. I built retrieval
+because it is the architecture that survives fifty job descriptions and
+multi-page documents, and because the assignment asks for it. But I would
+rather say that than pretend chunking was obviously correct at this size.
 
 ---
 
 ## Evaluation notes
 
-<!-- STUB: Kousha fills this in — anything the reviewer needs to know before running the app: test credentials, known flaky scenarios, what to try first -->
+No credentials needed. Add your Anthropic API key to `.env` and run
+`./build.sh` — it runs both test suites, brings up all three services, waits
+for them to be healthy, and opens the app.
+
+Worth trying, in this order:
+
+1. Upload a resume and at least three job descriptions. With only one or two,
+   the corpus is small enough that retrieval returns everything and the
+   per-source budgets never actually engage.
+2. Ask "which job am I the strongest fit for?" in **All jobs** scope, then
+   switch to a single job and ask the same thing. The citations change, and
+   the "Answering from…" line tells you exactly what is being read.
+3. Expand any citation chip. You get the retrieved passage, its similarity
+   score, and its location in the source document.
+4. Ask about something absent from your documents — Kubernetes usually works.
+   It should tell you it found nothing rather than inventing an answer. That
+   path is deliberate, not luck.
+5. Start a long answer and press Stop. The partial response is kept.
+
+Two known rough edges: follow-up questions that refer back to earlier turns
+retrieve poorly, and the Fit screen is an explicit placeholder rather than a
+built feature.
 
 ---
 
 ## About
 
-<!-- STUB: Kousha fills this in — your name, contact, and any acknowledgements -->
+**Kousha Rezaei**
+kousharezae@gmail.com · [github.com/Koi725](https://github.com/Koi725) · [kousharezaei.dev](https://kousharezaei.dev)
