@@ -83,7 +83,7 @@ class ClaudeClient:
     ) -> AsyncGenerator[tuple[str, dict], None]:
         async with self._async_client.messages.stream(
             model=self._model,
-            max_tokens=2048,
+            max_tokens=settings.MAX_TOKENS_PER_REQUEST,
             system=system,
             messages=messages,
         ) as stream:
@@ -96,5 +96,6 @@ class ClaudeClient:
                 {
                     "usage": final.usage,
                     "model": final.model,
+                    "stop_reason": final.stop_reason,
                 },
             )
